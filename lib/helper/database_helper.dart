@@ -10,9 +10,9 @@ class DatabaseHelper {
   String movieTable = 'movie_table';
   String colId = 'id';
   String colTitle = 'title';
-  String colYear = 'year';
   String colOverview = 'overview';
   String colPosterPath = 'posterPath';
+  String colVoteAverage = 'voteAverage';
 
   DatabaseHelper._createInstance();
 
@@ -34,20 +34,35 @@ class DatabaseHelper {
     String databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'movies.db');
 
-    var moviesDatabase =
-        await openDatabase(path, version: 1, onCreate: _createDb);
+    var moviesDatabase = await openDatabase(path,
+        version: 2, onCreate: _createDb, onUpgrade: _upgradeDb);
     return moviesDatabase;
   }
 
   void _createDb(Database db, int newVersion) async {
     await db.execute(
-        'CREATE TABLE $movieTable($colId INTEGER PRIMARY KEY AUTOINCREMENT, $colTitle TEXT, '
-        '$colYear INTEGER, $colOverview TEXT, $colPosterPath TEXT)');
+        'CREATE TABLE $movieTable($colId INTEGER PRIMARY KEY AUTOINCREMENT, '
+        '$colTitle TEXT, $colOverview TEXT, $colPosterPath TEXT, '
+        '$colVoteAverage REAL)');
+  }
+
+  void _upgradeDb(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      var tableInfo = await db.rawQuery('PRAGMA table_info($movieTable)');
+      bool columnExists =
+          tableInfo.any((column) => column['name'] == colVoteAverage);
+      if (!columnExists) {
+        await db
+            .execute('ALTER TABLE $movieTable ADD COLUMN $colVoteAverage REAL');
+      }
+    }
   }
 
   Future<int> insertMovie(Movie movie) async {
+    print('Inserting movie into database: ${movie.title}');
     Database? db = await this.database;
     var result = await db!.insert(movieTable, movie.toMap());
+    print('Movie inserted successfully');
     return result;
   }
 
@@ -67,9 +82,9 @@ class DatabaseHelper {
         moviesList.add(Movie(
           id: moviesMapList[i]['id'],
           title: moviesMapList[i]['title'],
-          year: moviesMapList[i]['year'],
           overview: moviesMapList[i]['overview'],
           posterPath: moviesMapList[i]['posterPath'],
+          voteAverage: moviesMapList[i]['voteAverage'],
         ));
       }
 
@@ -81,28 +96,29 @@ class DatabaseHelper {
   }
 
   Future<int> deleteMovie(int id) async {
-  try {
-    if (id != null) {
-      Database? db = await this.database;
-      int result = await db!.delete(
-        movieTable,
-        where: '$colId = ?',
-        whereArgs: [id],
-      );
-      return result;
-    } else {
-      throw Exception('Invalid movie ID');
+    try {
+      if (id != null) {
+        Database? db = await this.database;
+        int result = await db!.delete(
+          movieTable,
+          where: '$colId = ?',
+          whereArgs: [id],
+        );
+        return result;
+      } else {
+        throw Exception('Invalid movie ID');
+      }
+    } catch (e) {
+      print("Error deleting movie: $e");
+      return 0;
     }
-  } catch (e) {
-    print("Error deleting movie: $e");
-    return 0;
   }
-}
 
   Future<bool> isMovieFavorite(int id) async {
     try {
       Database? db = await this.database;
-      var result = await db!.rawQuery('SELECT COUNT(*) FROM $movieTable WHERE $colId = $id');
+      var result = await db!
+          .rawQuery('SELECT COUNT(*) FROM $movieTable WHERE $colId = $id');
       int count = Sqflite.firstIntValue(result)!;
       return count > 0;
     } catch (e) {

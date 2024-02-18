@@ -1,4 +1,3 @@
-
 import 'package:favorite_movie/helper/database_helper.dart';
 import 'package:favorite_movie/model/movie_model.dart';
 
@@ -11,5 +10,9 @@ class FavoritController {
 
   Future<List<Movie>> getFavoriteMovies() async {
     return await _databaseHelper.getMoviesList();
+  }
+
+  Future<int> deleteMovie(int id) async {
+    return await _databaseHelper.deleteMovie(id);
   }
 }

@@ -9,7 +9,7 @@ class FavoritePage extends StatefulWidget {
 }
 
 class _FavoritePageState extends State<FavoritePage> {
-  final dbHelper = DatabaseHelper();
+  final FavoritController _favoritController = FavoritController();
 
   List<Movie> favoriteMovies = [];
 
@@ -20,7 +20,7 @@ class _FavoritePageState extends State<FavoritePage> {
   }
 
   Future<void> _getFavoriteMovies() async {
-    final movies = await dbHelper.getMoviesList();
+    final movies = await _favoritController.getFavoriteMovies();
     setState(() {
       favoriteMovies = movies;
     });
@@ -28,7 +28,7 @@ class _FavoritePageState extends State<FavoritePage> {
 
   Future<void> _deleteFavoriteMovie(int? id) async {
     if (id != null) {
-      final result = await dbHelper.deleteMovie(id);
+      final result = await _favoritController.deleteMovie(id); 
       if (result != 0) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Deleted from Favorites')));
